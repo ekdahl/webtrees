@@ -46,8 +46,8 @@ import {
   faExpand, faGenderless, faGripHorizontal, faGripLines, faHistory, faInfoCircle, faLanguage,
   faLink, faList, faLock, faMagic, faMap, faMapMarkerAlt, faMars, faMedkit, faPaintBrush, faPause,
   faPencilAlt, faPlay, faPlus, faPuzzlePiece, faQuestionCircle, faRedo, faSearch, faSearchLocation,
-  faSearchMinus, faSearchPlus, faServer, faShareAlt, faSitemap, faSortAmountDown, faStepForward, faStop,
-  faSyncAlt, faTags, faThList, faThumbtack, faTimes, faTransgender, faTree, faUndo, faUniversity,
+  faSearchMinus, faSearchPlus, faServer, faShareAlt, faSitemap, faSortAmountDown, faSpinner, faStepForward,
+  faStop, faSyncAlt, faTags, faThList, faThumbtack, faTimes, faTransgender, faTree, faUndo, faUniversity,
   faUnlink, faUpload, faUsers, faVenus, faWrench,
   // For the BeautifyMarker library
   faBabyCarriage, faBullseye, faHome, faIndustry, faInfinity, faStarOfDavid, faWater
@@ -97,8 +97,8 @@ library.add(
   faExpand, faGenderless, faGripHorizontal, faGripLines, faHistory, faInfoCircle, faLanguage,
   faLink, faList, faLock, faMagic, faMap, faMapMarkerAlt, faMars, faMedkit, faPaintBrush, faPause,
   faPencilAlt, faPlay, faPlus, faPuzzlePiece, faQuestionCircle, faRedo, faSearch, faSearchLocation,
-  faSearchMinus, faSearchPlus, faServer, faShareAlt, faSitemap, faSortAmountDown, faStepForward, faStop,
-  faSyncAlt, faTags, faThList, faThumbtack, faTimes, faTransgender, faTree, faUndo, faUniversity,
+  faSearchMinus, faSearchPlus, faServer, faShareAlt, faSitemap, faSortAmountDown, faSpinner, faStepForward,
+  faStop, faSyncAlt, faTags, faThList, faThumbtack, faTimes, faTransgender, faTree, faUndo, faUniversity,
   faUnlink, faUpload, faUsers, faVenus, faWrench,
   // For the BeautifyMarker library
   faBabyCarriage, faBullseye, faHome, faIndustry, faInfinity, faStarOfDavid, faWater
