@@ -56,53 +56,59 @@
   }
 
   /**
-   * Simple replacement for jQuery().load() - fetch HTML, insert into an element, and execute and scripts.
+   * Simple replacement for jQuery().load() - fetch HTML, insert into an element, and execute any scripts.
    *
-   * @param {element} element
+   * @param {Element} element
    * @param {string} url
-   * @param {object|null} data
+   * @param {FormData|null} data
    */
-  webtrees.load = function (element, url, data = null) {
-    const csrfToken = document.head.querySelector('meta[name=csrf]').getAttribute('content');
-
-    const options = {
-      body: data,
-      method: data === null ? 'GET' : 'POST',
-      headers: new Headers({
-        'accept': 'text/html',
-        'x-requested-with': 'XMLHttpRequest',
-        'x-csrf-token': csrfToken,
-      }),
+  webtrees.load = async function (element, url, data = null) {
+    const headers = {
+      'accept': 'text/html',
+      'x-requested-with': 'XMLHttpRequest',
     };
 
-    fetch(url, options)
-      .then(response => {
-        return response.text();
-      })
-      .then(html => {
-        element.innerHTML = html;
+    if (data !== null) {
+      headers['x-csrf-token'] = document.head.querySelector('meta[name=csrf]').getAttribute('content');
+    }
 
-        // Parse into a document fragment
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
+    const response = await fetch(url, {
+      body: data,
+      method: data === null ? 'GET' : 'POST',
+      headers: new Headers(headers),
+    });
 
-        // Append script elements to the end of the body.
-        Array.from(doc.body.childNodes).forEach(node => {
-          if (node.tagName === "SCRIPT") {
-            let script = document.createElement('script');// Copy attributes (src, type, etc.)
-            Array.from(node.attributes).forEach(attr => {
-              script.setAttribute(attr.name, attr.value);
-            });
-            if (node.src) {
-              script.src = node.src;
-            } else {
-              script.textContent = node.textContent;
-            }
-            node.remove();
-            document.body.appendChild(script);
-          }
+    const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+    const scripts = Array.from(doc.querySelectorAll('script'));
+
+    // Don't insert scripts into the document.  We will execute them directly.
+    scripts.forEach(script => script.remove());
+
+    // Replace innerHTML with the loaded HTML.
+    element.replaceChildren(...doc.body.childNodes);
+
+    // Execute scripts sequentially
+    for (const node of scripts) {
+      const script = document.createElement('script');
+
+      for (const attr of node.attributes) {
+        script.setAttribute(attr.name, attr.value);
+      }
+
+      if (node.src) {
+        await new Promise(resolve => {
+          script.onload = resolve;
+          script.onerror = resolve;
+          document.body.appendChild(script);
         });
-      });
+      } else {
+        script.textContent = node.textContent;
+        document.body.appendChild(script);
+      }
+
+      // Remove the script we just executed to reduce clutter.
+      script.remove();
+    }
   }
 
   /**
