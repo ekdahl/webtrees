@@ -31,15 +31,14 @@ use Fisharebest\Webtrees\Registry;
 use Fisharebest\Webtrees\Services\PhpService;
 use Fisharebest\Webtrees\Webtrees;
 use Imagick;
-use Intervention\Gif\Exceptions\NotReadableException;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use Intervention\Image\Exceptions\ImageException;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\ImageInterface;
 use InvalidArgumentException;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
-use League\Flysystem\UnableToReadFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -55,7 +54,6 @@ use function pathinfo;
 use function preg_replace;
 use function response;
 use function str_starts_with;
-use function stripos;
 use function strtolower;
 use function view;
 
@@ -106,9 +104,9 @@ class ImageFactory implements ImageFactoryInterface
             $filename = $download ? addcslashes(string: basename(path: $path), characters: '"') : '';
 
             return $this->imageResponse(data: $filesystem->read(location: $path), mime_type: $mime_type, filename: $filename);
-        } catch (UnableToReadFile | FilesystemException $ex) {
+        } catch (FilesystemException $ex) {
             return $this->replacementImageResponse(text: (string) StatusCodeInterface::STATUS_NOT_FOUND)
-                ->withHeader('x-thumbnail-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
+                ->withHeader('x-file-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
         }
     }
 
@@ -121,17 +119,17 @@ class ImageFactory implements ImageFactoryInterface
     ): ResponseInterface {
         try {
             $mime_type = $filesystem->mimeType(path: $path);
-            $image     = $this->imageManager()->read(input: $filesystem->readStream($path));
+            $image     = $this->imageManager()->decodeBinary(binary: $filesystem->read(location: $path));
             $image     = $this->resizeImage(image: $image, width: $width, height: $height, fit: $fit);
             $quality   = $this->extractImageQuality(image: $image, default: static::GD_DEFAULT_THUMBNAIL_QUALITY);
-            $data      = $image->encodeByMediaType(type: $mime_type, quality: $quality)->toString();
+            $data      = $image->encodeUsingMediaType(mediaType: $mime_type, quality: $quality)->toString();
 
             return $this->imageResponse(data: $data, mime_type: $mime_type, filename: '');
-        } catch (FilesystemException | UnableToReadFile $ex) {
+        } catch (FilesystemException $ex) {
             return $this
                 ->replacementImageResponse(text: (string) StatusCodeInterface::STATUS_NOT_FOUND)
                 ->withHeader('x-thumbnail-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
-        } catch (RuntimeException $ex) {
+        } catch (ImageException $ex) {
             return $this
                 ->replacementImageResponse(text: '.' . pathinfo(path: $path, flags: PATHINFO_EXTENSION))
                 ->withHeader('x-thumbnail-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
@@ -153,20 +151,20 @@ class ImageFactory implements ImageFactoryInterface
 
         try {
             $mime_type = $media_file->mimeType();
-            $image     = $this->imageManager()->read(input: $filesystem->readStream($path));
+            $image     = $this->imageManager()->decodeBinary(binary: $filesystem->read(location: $path));
             $watermark = $this->createWatermark(width: $image->width(), height: $image->height(), media_file: $media_file);
             $image     = $this->addWatermark(image: $image, watermark: $watermark);
             $filename  = $download ? basename(path: $path) : '';
             $quality   = $this->extractImageQuality(image: $image, default: static::GD_DEFAULT_IMAGE_QUALITY);
-            $data      = $image->encodeByMediaType(type: $mime_type, quality:  $quality)->toString();
+            $data      = $image->encodeUsingMediaType(mediaType: $mime_type, quality: $quality)->toString();
 
             return $this->imageResponse(data: $data, mime_type: $mime_type, filename: $filename);
-        } catch (NotReadableException $ex) {
+        } catch (ImageException $ex) {
             return $this->replacementImageResponse(text: pathinfo(path: $path, flags: PATHINFO_EXTENSION))
                 ->withHeader('x-image-exception', $ex->getMessage());
-        } catch (FilesystemException | UnableToReadFile $ex) {
+        } catch (FilesystemException $ex) {
             return $this->replacementImageResponse(text: (string) StatusCodeInterface::STATUS_NOT_FOUND)
-                ->withHeader('x-thumbnail-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
+                ->withHeader('x-image-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
         } catch (Throwable $ex) {
             return $this->replacementImageResponse(text: (string) StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR)
                 ->withHeader('x-image-exception', $ex->getMessage());
@@ -180,10 +178,10 @@ class ImageFactory implements ImageFactoryInterface
         string $fit,
         bool $add_watermark
     ): string {
-        // Where are the images stored.
+        // Where are the images stored?
         $filesystem = $media_file->media()->tree()->mediaFilesystem();
 
-        // Where is the image stored in the filesystem.
+        // Where is the image stored in the filesystem?
         $path = $media_file->filename();
 
         $key = implode(separator: ':', array: [
@@ -197,7 +195,7 @@ class ImageFactory implements ImageFactoryInterface
         ]);
 
         $closure = function () use ($filesystem, $path, $width, $height, $fit, $add_watermark, $media_file): string {
-            $image = $this->imageManager()->read(input: $filesystem->readStream($path));
+            $image = $this->imageManager()->decodeBinary(binary: $filesystem->read(location: $path));
             $image = $this->resizeImage(image: $image, width: $width, height: $height, fit: $fit);
 
             if ($add_watermark) {
@@ -205,9 +203,9 @@ class ImageFactory implements ImageFactoryInterface
                 $image     = $this->addWatermark(image: $image, watermark: $watermark);
             }
 
-            $quality = $this->extractImageQuality(image: $image, default:  static::GD_DEFAULT_THUMBNAIL_QUALITY);
+            $quality = $this->extractImageQuality(image: $image, default: static::GD_DEFAULT_THUMBNAIL_QUALITY);
 
-            return $image->encodeByMediaType(type: $media_file->mimeType(), quality: $quality)->toString();
+            return $image->encodeUsingMediaType(mediaType: $media_file->mimeType(), quality: $quality)->toString();
         };
 
         return Registry::cache()->file()->remember(key: $key, closure: $closure, ttl: static::THUMBNAIL_CACHE_TTL);
@@ -220,10 +218,10 @@ class ImageFactory implements ImageFactoryInterface
         string $fit,
         bool $add_watermark
     ): ResponseInterface {
-        // Where are the images stored.
+        // Where are the images stored?
         $filesystem = $media_file->media()->tree()->mediaFilesystem();
 
-        // Where is the image stored in the filesystem.
+        // Where is the image stored in the filesystem?
         $path = $media_file->filename();
 
         try {
@@ -231,12 +229,8 @@ class ImageFactory implements ImageFactoryInterface
 
             $data = $this->mediaFileThumbnail($media_file, $width, $height, $fit, $add_watermark);
 
-            return $this->imageResponse(data: $data, mime_type:  $mime_type, filename:  '');
-        } catch (NotReadableException $ex) {
-            return $this
-                ->replacementImageResponse(text: '.' . pathinfo(path: $path, flags:  PATHINFO_EXTENSION))
-                ->withHeader('x-thumbnail-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
-        } catch (FilesystemException | UnableToReadFile $ex) {
+            return $this->imageResponse(data: $data, mime_type: $mime_type, filename: '');
+        } catch (FilesystemException $ex) {
             return $this
                 ->replacementImageResponse(text: (string) StatusCodeInterface::STATUS_NOT_FOUND)
                 ->withHeader('x-thumbnail-exception', get_class(object: $ex) . ': ' . $ex->getMessage());
@@ -256,19 +250,19 @@ class ImageFactory implements ImageFactoryInterface
 
     public function thumbnailNeedsWatermark(MediaFile $media_file, UserInterface $user): bool
     {
-        return $this->fileNeedsWatermark(media_file: $media_file, user:  $user);
+        return $this->fileNeedsWatermark(media_file: $media_file, user: $user);
     }
 
     public function createWatermark(int $width, int $height, MediaFile $media_file): ImageInterface
     {
         return $this->imageManager()
-            ->read(input: Webtrees::ROOT_DIR . static::WATERMARK_FILE)
+            ->decodePath(path: Webtrees::ROOT_DIR . static::WATERMARK_FILE)
             ->scale(width: $width, height: $height);
     }
 
     public function addWatermark(ImageInterface $image, ImageInterface $watermark): ImageInterface
     {
-        return $image->place(element: $watermark, position: 'center');
+        return $image->insert(image: $watermark, alignment: 'center');
     }
 
     public function replacementImageResponse(string $text): ResponseInterface
@@ -305,8 +299,9 @@ class ImageFactory implements ImageFactoryInterface
             return $response;
         }
 
-        return $response
-            ->withHeader('content-disposition', 'attachment; filename="' . addcslashes(string: basename(path: $filename), characters: '"') . '"');
+        $filename = addcslashes(string: basename(path: $filename), characters: '"');
+
+        return $response->withHeader('content-disposition', 'attachment; filename="' . $filename . '"');
     }
 
     /**

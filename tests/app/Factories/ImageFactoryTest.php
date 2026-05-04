@@ -122,7 +122,7 @@ class ImageFactoryTest extends TestCase
         self::assertSame('image/svg+xml', $response->getHeaderLine('content-type'));
         self::assertStringContainsString(
             'UnableToReadFile',
-            $response->getHeaderLine('x-thumbnail-exception'),
+            $response->getHeaderLine('x-file-exception'),
         );
     }
 
