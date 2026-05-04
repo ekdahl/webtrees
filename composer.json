@@ -69,8 +69,8 @@
         "psr/http-server-middleware": "1.0.2",
         "ramsey/uuid": "4.9.2",
         "sabre/vobject": "4.5.8",
-        "symfony/cache": "7.4.8",
-        "symfony/console": "7.4.8",
+        "symfony/cache": "7.4.9",
+        "symfony/console": "7.4.9",
         "symfony/expression-language": "7.4.8",
         "symfony/mailer": "7.4.8",
         "symfony/polyfill-mbstring": "1.37.0",
@@ -84,10 +84,10 @@
         "league/flysystem-memory": "3.31.0",
         "php-coveralls/php-coveralls": "2.9.1",
         "phpstan/extension-installer": "1.4.3",
-        "phpstan/phpstan": "2.1.51",
+        "phpstan/phpstan": "2.1.54",
         "phpstan/phpstan-deprecation-rules": "2.0.4",
         "phpstan/phpstan-phpunit": "2.0.16",
-        "phpunit/phpunit": "12.5.23",
+        "phpunit/phpunit": "12.5.24",
         "squizlabs/php_codesniffer": "4.0.1"
     },
     "suggest": {
