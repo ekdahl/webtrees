@@ -336,8 +336,8 @@ use Fisharebest\Webtrees\Individual;
         }
         $col %= 8;
         echo '</td><td class="person' . $col . '">';
-        if (count($individuals) > 6) {
-            // We only have six colours, so show names if more than this number
+        if (count($individuals) > 8) {
+            // We only have 8 colours, so show names if more than this number
             echo $event->record()->fullName() . ' — ';
         }
         $record = $event->record();
