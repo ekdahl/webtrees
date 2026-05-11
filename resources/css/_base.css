@@ -31,11 +31,10 @@
 @import "_tab-relatives.css";
 @import "_typeaheadjs.css";
 
-/* Some icons need to be reversed on right-to-left pages */
+/* Some icons need to be reversed on right-to-left or left-to-right pages */
 /* rtl:ignore */
-[dir=rtl] .wt-icon-flip-rtl
-{
-    transform: scale(-1, 1);
+[dir=rtl] .wt-icon-flip-rtl, [dir=ltr] .wt-icon-flip-ltr {
+    transform: scaleX(-1);
 }
 
 /* rtl:ignore */
